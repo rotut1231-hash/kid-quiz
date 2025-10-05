@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детская Викторина (Wordle-Клон)</title>
+    <style>
+        :root {
+            /* Цветовая схема */
+            --tile-size: 50px;
+            --color-correct: #6AAA64; /* Зеленый */
+            --color-present: #C9B458; /* Желтый */
+            --color-absent: #787C7E; /* Серый */
+            --color-unused: #D3D6DA; /* Светло-серый */
+            --color-keyboard-bg: #818384;
+            --color-bg: #FFFFFF;
+            --color-text: #202020;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            
+            /* НОВЫЙ CSS ДЛЯ ВЫРАВНИВАНИЯ ПО ЦЕНТРУ */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Центрирование по вертикали */
+            align-items: center; /* Центрирование по горизонтали */
+            min-height: 100vh; /* Минимальная высота - весь экран */
+            padding: 20px; /* Добавим небольшой отступ, чтобы контент не прилипал к краям */
+            box-sizing: border-box;
+            /* КОНЕЦ НОВОГО CSS */
+        }
+
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px; /* Уменьшим отступ */
+            text-align: center;
+        }
+
+        p {
+            margin-top: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #game-board {
+            /* 2 строки */
+            display: grid;
+            grid-template-rows: repeat(2, var(--tile-size)); 
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(5, var(--tile-size)); /* 5 букв */
+            gap: 5px;
+        }
+
+        .tile {
+            width: var(--tile-size);
+            height: var(--tile-size);
+            border: 2px solid var(--color-absent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-sizing: border-box;
+            background-color: transparent;
+            color: var(--color-text);
+            transition: background-color 0.5s, border-color 0.5s;
+        }
+
+        .tile.correct { background-color: var(--color-correct); border-color: var(--color-correct); color: white; }
+        .tile.present { background-color: var(--color-present); border-color: var(--color-present); color: white; }
+        .tile.absent { background-color: var(--color-absent); border-color: var(--color-absent); color: white; }
+        .tile.filled { border-color: var(--color-text); }
+
+        #keyboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .keyboard-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .key {
+            background-color: var(--color-unused);
+            color: var(--color-text);
+            border: none;
+            border-radius: 4px;
+            padding: 10px 0;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            flex-grow: 1;
+            min-width: 30px;
+            max-width: 45px;
+            transition: background-color 0.1s;
+        }
+
+        .key.big {
+            padding: 10px 15px;
+            flex-grow: 1.5;
+        }
+
+        .key:active {
+            filter: brightness(0.9);
+        }
+        
+        /* Цвета на клавиатуре */
+        .key.correct { background-color: var(--color-correct); color: white; }
+        .key.present { background-color: var(--color-present); color: white; }
+        .key.absent { background-color: var(--color-absent); color: white; }
+
+        #message-area {
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #FF0000; /* Красный для предупреждений */
+            min-height: 25px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧠 Детская Викторина 💡</h1>
+    <p>Угадай слово из 5 букв. У тебя всего 2 попытки!</p>
+
+    <div id="game-board">
+        </div>
+
+    <div id="message-area"></div>
+
+    <div id="keyboard">
+        </div>
+
+    <script>
+        // ====================================================================
+        // БАЗА ДАННЫХ СЛОВ (Имитация)
+        // ====================================================================
+        const WORDS_DATABASE = [
+            'КОШКА', 'СОБАК', 'РЫБКА', 'КНИГА', 'РУЧКА',
+            'СТОЛБ', 'ПОЕЗД', 'ТРАВА', 'ЦВЕТОК', 'ПАРТА',
+            'ШКОЛА', 'СЕКРЕТ', 'ИГРАТ', 'ЖИРАФ', 'СЛОНА',
+            'СОЛНЦ', 'ЛУНАМ', 'ЗВЕЗД', 'НЕБОС', 'СКАЗК'
+        ];
+        const WORD_LENGTH = 5;
+        const MAX_ATTEMPTS = 2; 
+        const COOLDOWN_HOURS = 4;
+        const COOLDOWN_MS = COOLDOWN_HOURS * 60 * 60 * 1000; // 4 часа в миллисекундах
+
+        // ====================================================================
+        // СТАТУС ИГРЫ
+        // ====================================================================
+        let state = {
+            currentGuess: '',
+            attempts: [], 
+            targetWord: '',
+            attemptsCount: 0,
+            lastFailedTime: 0,
+            isLocked: false,
+            gameStatus: 'playing', // 'playing', 'won', 'lost', 'locked'
+            lossCount: 0 
+        };
+
+        const boardElement = document.getElementById('game-board');
+        const keyboardElement = document.getElementById('keyboard');
+        const messageArea = document.getElementById('message-area');
+
+        // --- Функция для получения слова на сегодняшний день ---
+        function getDailyWord() {
+            const start = new Date(2024, 0, 1);
+            const today = new Date();
+            const diffTime = Math.abs(today - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const index = diffDays % WORDS_DATABASE.length;
+            return WORDS_DATABASE[index];
+        }
+
+        // --- Загрузка и проверка состояния игры из localStorage ---
+        function loadGameState() {
+            const savedState = JSON.parse(localStorage.getItem('kidWordleState'));
+            
+            state.lossCount = parseInt(localStorage.getItem('kidWordleLossCount') || '0', 10);
+            
+            const dailyWord = getDailyWord();
+
+            if (savedState && savedState.targetWord === dailyWord) {
+                state = { ...state, ...savedState };
+            } else {
+                state.targetWord = dailyWord;
+                state.attempts = [];
+                state.attemptsCount = 0;
+                state.lastFailedTime = 0;
+                state.gameStatus = 'playing';
+                state.lossCount = parseInt(localStorage.getItem('kidWordleLossCount') || '0', 10);
+            }
+
+            checkCooldown();
+        }
+
+        // --- Сохранение состояния игры в localStorage ---
+        function saveGameState() {
+            localStorage.setItem('kidWordleState', JSON.stringify({
+                ...state,
+                lossCount: undefined
+            }));
+            localStorage.setItem('kidWordleLossCount', state.lossCount);
+        }
+        
+        // --- Проверка временной блокировки (4 часа) ---
+        function checkCooldown() {
+            if (state.lossCount >= 2 && state.lastFailedTime) {
+                const timePassed = Date.now() - state.lastFailedTime;
+                if (timePassed < COOLDOWN_MS) {
+                    state.isLocked = true;
+                    state.gameStatus = 'locked';
+                    const remainingTime = COOLDOWN_MS - timePassed;
+                    const hours = Math.floor(remainingTime / (1000 * 60 * 60));
+                    const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+                    showMessage(`Игра заблокирована. Две неудачи подряд активировали таймер. Следующая попытка через ${hours} ч. ${minutes} мин.`, true);
+                    return true;
+                } else {
+                    state.lastFailedTime = 0;
+                    state.isLocked = false;
+                    state.gameStatus = 'playing';
+                    state.lossCount = 0; 
+                    saveGameState();
+                    showMessage('Снова можно играть!');
+                }
+            }
+            return state.isLocked;
+        }
+
+        // --- Отображение сообщения ---
+        function showMessage(msg, isError = false) {
+            messageArea.textContent = msg;
+            messageArea.style.color = isError ? 'red' : 'blue';
+            setTimeout(() => {
+                if (!state.isLocked) {
+                    messageArea.textContent = '';
+                }
+            }, isError ? 5000 : 2000);
+        }
+
+        // --- Отрисовка сетки (доски) ---
+        function drawBoard() {
+            boardElement.innerHTML = '';
+            for (let i = 0; i < MAX_ATTEMPTS; i++) {
+                const row = document.createElement('div');
+                row.className = 'row';
+                for (let j = 0; j < WORD_LENGTH; j++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    if (state.attempts[i]) {
+                        const letter = state.attempts[i].word[j];
+                        const status = state.attempts[i].status[j];
+                        tile.textContent = letter;
+                        tile.classList.add(status);
+                    } else if (i === state.attempts.length && state.gameStatus === 'playing') {
+                        if (state.currentGuess[j]) {
+                            tile.textContent = state.currentGuess[j];
+                            tile.classList.add('filled');
+                        } else {
+                            tile.textContent = '';
+                        }
+                    }
+                    row.appendChild(tile);
+                }
+                boardElement.appendChild(row);
+            }
+        }
+
+        // --- Отрисовка клавиатуры ---
+        function drawKeyboard() {
+            const layout = [
+                'Й Ц У К Е Н Г Ш Щ З Х Ъ',
+                'Ф Ы В А П Р О Л Д Ж Э',
+                'Я Ч С М И Т Ь Б Ю'
+            ];
+            keyboardElement.innerHTML = '';
+            
+            layout.forEach(rowString => {
+                const row = document.createElement('div');
+                row.className = 'keyboard-row';
+                
+                // Добавление кнопок ENTER и DELETE
+                if (rowString.startsWith('Я')) {
+                    const enter = document.createElement('button');
+                    enter.textContent = 'Ввод';
+                    enter.className = 'key big';
+                    enter.onclick = () => handleInput('Enter');
+                    row.appendChild(enter);
+                }
+                
+                rowString.split(' ').forEach(letter => {
+                    const key = document.createElement('button');
+                    key.textContent = letter;
+                    key.className = 'key';
+                    key.onclick = () => handleInput(letter);
+                    
+                    const keyState = localStorage.getItem(`key_${letter}`);
+                    if (keyState) {
+                        key.classList.add(keyState);
+                    }
+
+                    row.appendChild(key);
+                });
+                
+                if (rowString.startsWith('Я')) {
+                    const del = document.createElement('button');
+                    del.textContent = '⌫';
+                    del.className = 'key big';
+                    del.onclick = () => handleInput('Backspace');
+                    row.appendChild(del);
+                }
+
+                keyboardElement.appendChild(row);
+            });
+        }
+        
+        // --- Обновление цвета клавиши ---
+        function updateKeyColor(letter, status) {
+            const key = Array.from(keyboardElement.querySelectorAll('.key')).find(k => k.textContent === letter);
+            if (!key) return;
+
+            const currentStatus = key.className.split(' ').find(cls => ['correct', 'present', 'absent'].includes(cls));
+
+            if (status === 'correct') {
+                key.classList.remove(currentStatus);
+                key.classList.add('correct');
+                localStorage.setItem(`key_${letter}`, 'correct');
+            } else if (status === 'present' && currentStatus !== 'correct') {
+                key.classList.remove(currentStatus);
+                key.classList.add('present');
+                localStorage.setItem(`key_${letter}`, 'present');
+            } else if (status === 'absent' && !currentStatus) {
+                key.classList.add('absent');
+                localStorage.setItem(`key_${letter}`, 'absent');
+            }
+        }
+
+
+        // --- Логика проверки слова ---
+        function checkGuess() {
+            const guess = state.currentGuess;
+            const target = state.targetWord;
+            const targetMap = {};
+            for (const char of target) {
+                targetMap[char] = (targetMap[char] || 0) + 1;
+            }
+
+            const status = Array(WORD_LENGTH).fill('absent');
+            let correctCount = 0;
+
+            // Шаг 1: Находим "correct" (зеленые)
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                if (guess[i] === target[i]) {
+                    status[i] = 'correct';
+                    targetMap[guess[i]]--;
+                    correctCount++;
+                }
+            }
+
+            // Шаг 2: Находим "present" (желтые) и "absent" (серые)
+            for (let i = 0; i < WORD_LENGTH; i++) {
+                if (status[i] !== 'correct') {
+                    if (targetMap[guess[i]] > 0) {
+                        status[i] = 'present';
+                        targetMap[guess[i]]--;
+                    }
+                }
+                updateKeyColor(guess[i], status[i]);
+            }
+            
+            // Сохраняем попытку
+            state.attempts.push({ word: guess, status: status });
+            state.currentGuess = '';
+            state.attemptsCount++;
+            
+            
+            // --- ЛОГИКА ПОБЕДЫ ---
+            if (correctCount === WORD_LENGTH) {
+                state.gameStatus = 'won';
+                state.lossCount = 0; 
+                saveGameState();
+                showMessage(`Ура! Ты угадал слово "${target}"! 🎉`);
+                return;
+            }
+
+            // --- ЛОГИКА ПРОИГРЫША И БЛОКИРОВКИ ---
+            if (state.attemptsCount >= MAX_ATTEMPTS) {
+                state.gameStatus = 'lost';
+                
+                state.lossCount++; 
+                
+                if (state.lossCount >= 2) {
+                    state.lastFailedTime = Date.now();
+                    state.isLocked = true;
+                    showMessage(`Слово было "${target}". 💔 Две неудачи подряд активировали таймер.`, true);
+                    checkCooldown(); 
+                } else {
+                    showMessage(`Ты не угадал. Слово было "${target}". 😕`);
+                }
+
+                saveGameState();
+            } else {
+                saveGameState();
+            }
+        }
+        
+        // --- Обработка ввода (клавиатура или мышь) ---
+        function handleInput(key) {
+            if (state.gameStatus !== 'playing') {
+                return;
+            }
+
+            const letter = key.toUpperCase();
+
+            if (letter === 'ENTER') {
+                if (state.currentGuess.length === WORD_LENGTH) {
+                    checkGuess();
+                } else {
+                    showMessage(`Слово должно быть из ${WORD_LENGTH} букв!`, true);
+                }
+            } else if (letter === 'BACKSPACE' || letter === 'DELETE') {
+                state.currentGuess = state.currentGuess.slice(0, -1);
+            } else if (letter.length === 1 && 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'.includes(letter)) {
+                if (state.currentGuess.length < WORD_LENGTH) {
+                    state.currentGuess += letter;
+                }
+            }
+            drawBoard(); 
+        }
+
+        // --- Инициализация игры ---
+        function init() {
+            loadGameState();
+            drawBoard();
+            drawKeyboard();
+            
+            // Добавляем слушатель для физической клавиатуры
+            document.addEventListener('keyup', (e) => {
+                if (state.gameStatus === 'playing') {
+                    if (e.key === 'Enter') {
+                        handleInput('Enter');
+                    } else if (e.key === 'Backspace') {
+                        handleInput('Backspace');
+                    } else if (e.key.length === 1) { 
+                        handleInput(e.key);
+                    }
+                }
+            });
+        }
+
+        // Запуск!
+        init();
+
+    </script>
+</body>
+</html>
