@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детская Викторина (Вопрос-Ответ)</title>
+    <style>
+        :root {
+            /* ЦВЕТА */
+            --color-correct: #00A000; /* Зеленый для победы/успеха */
+            --color-absent: #787C7E; 
+            --color-unused: #D3D6DA; 
+            --color-text: #000000; /* Черный для основного текста */
+            --color-blue: #1565C0; /* Синий для вопроса/таймера */
+            --color-button-bg: #4CAF50; /* Зеленый для кнопки */
+            --color-button-text: white;
+        }
+
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            margin: 0;
+            background-image: url('https://img.freepik.com/premium-vector/cute-kid-scribble-line-flower-heart-rainbow-background-hand-drawn-doodle-sketch-childish-element_787654-934.jpg?semt=ais_hybrid&w=740');
+            background-repeat: repeat;
+            background-size: 300px; 
+            background-color: rgba(255, 255, 255, 0.6); 
+            background-blend-mode: overlay; 
+            color: var(--color-text);
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+            box-sizing: border-box;
+        }
+        
+        /* Основной контейнер, который теперь всегда Flex-столбец для порядка сверху вниз */
+        .game-section {
+            background-color: rgba(255, 255, 255, 0.95); 
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); 
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            /* Обеспечиваем вертикальное расположение элементов СВЕРХУ ВНИЗ */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Скрываем игровой раздел по умолчанию */
+        #quiz-container {
+            display: none; 
+        }
+
+        h1 { font-size: 1.8em; margin-bottom: 20px; color: var(--color-blue); }
+        p { margin-top: 5px; margin-bottom: 15px; }
+
+        /* --- Стили для Авторизации --- */
+        .auth-input-group {
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 350px; 
+            text-align: left;
+        }
+        /* Скрываем метку (label) полностью */
+        .auth-input-group label {
+            display: none;
+        }
+        .auth-input-group input {
+            width: calc(100% - 22px); 
+            padding: 10px;
+            border: 2px solid var(--color-blue);
+            border-radius: 6px;
+            font-size: 1em;
+            text-transform: capitalize;
+            box-sizing: border-box;
+        }
+        
+        #continue-button {
+            background-color: var(--color-button-bg);
+            color: var(--color-button-text);
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            max-width: 250px;
+        }
+        #continue-button:hover {
+            background-color: #43A047;
+        }
+        /* --------------------------- */
+        
+        /* --- Стили для Викторины (Quiz) --- */
+        
+        #quiz-container h1, #quiz-container p {
+            width: 100%;
+            background-color: transparent; 
+            box-shadow: none;
+            padding: 0;
+            margin: 0;
+            margin-bottom: 10px;
+        }
+
+        #question-area {
+            font-size: 1.2em;
+            font-weight: bold; 
+            color: var(--color-blue); 
+            padding: 20px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            width: 100%; 
+        }
+
+        #answer-row {
+            padding: 15px;
+            border: 2px solid #ccc;
+            min-height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8em;
+            font-weight: bold; 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            overflow: hidden; 
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            width: 100%; 
+            margin-bottom: 15px;
+        }
+        
+        #keyboard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+            padding: 10px;
+            width: 100%; 
+        }
+        
+        .keyboard-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .key {
+            background-color: var(--color-unused);
+            color: var(--color-text);
+            border: none;
+            border-radius: 4px;
+            padding: 10px 0;
+            cursor: pointer;
+            font-weight: normal; 
+            text-transform: uppercase;
+            flex-grow: 1;
+            min-width: 30px;
+            max-width: 45px;
+            transition: background-color 0.1s;
+        }
+
+        .key.big {
+            padding: 10px 15px;
+            flex-grow: 1.8; 
+            max-width: none; 
+        }
+        
+        .key:active {
+            filter: brightness(0.9);
+        }
+        
+        #message-area {
+            font-size: 1.1em;
+            font-weight: bold;
+            min-height: 25px;
+            text-align: center;
+            margin-top: 5px;
+            width: 100%;
+        }
+
+        #cooldown-area {
+            font-size: 1em;
+            font-weight: bold;
+            color: var(--color-blue); 
+            min-height: 20px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        /* Цвета сообщений */
+        .message-success {
+            color: var(--color-correct) !important; 
+        }
+
+        .message-error {
+            color: #FF0000 !important; 
+        }
+        
+        /* Стили для Админ-панели */
+        #secret-trigger { width: 80%; max-width: 400px; height: 20px; margin-top: -10px; margin-bottom: 10px; z-index: 10; cursor: pointer; }
+        #admin-modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .modal-content { 
+            background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; 
+            max-width: 900px; border-radius: 8px; color: var(--color-text); box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+            max-height: 90vh; display: flex; flex-direction: column; 
+        }
+        .modal-content h2 { margin-top: 0; padding-bottom: 10px; flex-shrink: 0; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover, .close:focus { color: #000; text-decoration: none; cursor: pointer; }
+        
+        .admin-tabs { margin-bottom: 10px; border-bottom: 2px solid #ccc; display: flex; }
+        .admin-tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            background-color: #f4f4f4;
+            border-radius: 4px 4px 0 0;
+            transition: background-color 0.3s;
+        }
+        .admin-tab-button:hover { background-color: #eee; }
+
+        #word-list-container, #log-list-container { overflow-y: auto; max-height: 400px; margin-top: 10px; flex-grow: 1; }
+        
+        #word-list-table, #log-list-table { width: 100%; border-collapse: collapse; font-size: 0.9em; position: relative; }
+        #word-list-table th, #word-list-table td, #log-list-table th, #log-list-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        #word-list-table th, #log-list-table th { background-color: #f2f2f2; position: sticky; top: 0; z-index: 2; }
+        .today-row { background-color: #d4edda; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container" class="game-section">
+        <h1>👋 Добро пожаловать!</h1>
+        <p>Для начала викторины введите свое Имя и Фамилию.</p>
+        
+        <div class="auth-input-group">
+            <label for="fullName">Имя и Фамилия</label>
+            <input type="text" id="fullName" placeholder="Например, Иван Петров" autocomplete="off">
+        </div>
+        
+        <button id="continue-button">Продолжить</button>
+        <div id="auth-message-area" style="color: red; margin-top: 10px;"></div>
+    </div>
+
+    <div id="quiz-container" class="game-section">
+        <h1 id="main-title">🧠 Детская Викторина 💡</h1>
+        <p id="welcome-message"></p>
+        
+        <div id="secret-trigger"></div>
+
+        <div id="question-area"></div>
+        
+        <div id="answer-row"></div> 
+
+        <div id="message-area"></div>
+        
+        <div id="keyboard">
+            </div>
+        
+        <div id="cooldown-area"></div>
+    </div>
+
+    <div id="admin-modal" style="display: none;">
+      <div class="modal-content">
+        <span class="close" onclick="document.getElementById('admin-modal').style.display='none'">&times;</span>
+        <h2>Административная панель 🤫</h2>
+        
+        <div class="admin-tabs">
+            <div class="admin-tab-button" id="tab-questions" onclick="switchAdminTab('questions')" style="font-weight: bold;">Список вопросов</div>
+            <div class="admin-tab-button" id="tab-logs" onclick="switchAdminTab('logs')">История игр</div>
+        </div>
+
+        <div id="quiz-list-view">
+            <div id="word-list-container">
+                <table id="word-list-table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Вопрос</th>
+                      <th>Ответ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="word-list-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="log-list-view" style="display: none;">
+            <div id="log-list-container">
+                <table id="log-list-table">
+                  <thead>
+                    <tr>
+                      <th>Дата и время</th>
+                      <th>Имя</th>
+                      <th>Вопрос (нач.)</th>
+                      <th>Ответ</th>
+                      <th>Попыток</th>
+                      <th>Статус</th>
+                    </tr>
+                  </thead>
+                  <tbody id="log-list-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+      </div>
+    </div>
+
+    <script>
+        // ====================================================================
+        // КОНСТАНТЫ И БАЗА ДАННЫХ
+        // ====================================================================
+        const QUIZ_DATABASE = [
+            { question: 'Какой элемент в математике складывает числа?', answer: 'СЛОЖЕНИЕ' },
+            { question: 'Как называется вода, которая падает с неба в виде капель?', answer: 'ДОЖДЬ' },
+            { question: 'Какой цвет получится, если смешать синий и желтый?', answer: 'ЗЕЛЁНЫЙ' },
+            { question: 'Как называется человек, который летит в космос?', answer: 'КОСМОНАВТ' },
+            { question: 'Какой зверь зимой спит в берлоге?', answer: 'МЕДВЕДЬ' },
+            { question: 'Самая большая планета в нашей солнечной системе?', answer: 'ЮПИТЕР' },
+            { question: 'Что защищает голову велосипедиста?', answer: 'ШЛЕМ' },
+        ];
+
+        const MAX_ATTEMPTS = 2; 
+        const COOLDOWN_MS = 5 * 1000; // Таймер на 5 секунд
+        const REQUIRED_CLICKS = 5; 
+
+        // ====================================================================
+        // СТАТУС ИГРЫ (ОБНОВЛЕНО: ДОБАВЛЕН gameLogs)
+        // ====================================================================
+        let state = {
+            currentGuess: '',
+            targetAnswer: '', 
+            targetQuestion: '', 
+            attemptsCount: 0,
+            lastFailedTime: 0,
+            isLocked: false,
+            gameStatus: 'playing', 
+            userName: '', 
+            gameLogs: JSON.parse(localStorage.getItem('quizGameLogs')) || [] 
+        };
+        
+        let secretClickCount = 0;
+        let clickTimeout = null; 
+
+        // Элементы DOM для Авторизации
+        const authContainer = document.getElementById('auth-container');
+        const fullNameInput = document.getElementById('fullName');
+        const continueButton = document.getElementById('continue-button');
+        const authMessageArea = document.getElementById('auth-message-area');
+        
+        // Элементы DOM для Викторины
+        const quizContainer = document.getElementById('quiz-container');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const questionArea = document.getElementById('question-area');
+        const answerRow = document.getElementById('answer-row');
+        const keyboardElement = document.getElementById('keyboard');
+        const messageArea = document.getElementById('message-area');
+        const cooldownArea = document.getElementById('cooldown-area');
+        const adminModal = document.getElementById('admin-modal');
+        const secretTrigger = document.getElementById('secret-trigger');
+
+
+        // --- ФУНКЦИИ АВТОРИЗАЦИИ ---
+
+        function handleContinue() {
+            const fullName = fullNameInput.value.trim();
+
+            if (fullName.length < 5 || fullName.split(/\s+/).length < 2) {
+                authMessageArea.textContent = 'Пожалуйста, введите Имя и Фамилию (например, Иван Петров).';
+                return;
+            }
+
+            state.userName = fullName;
+            localStorage.setItem('quizUserName', state.userName);
+
+            authContainer.style.display = 'none';
+            quizContainer.style.display = 'flex'; 
+
+            const firstName = fullName.split(/\s+/)[0];
+            welcomeMessage.textContent = `Привет, ${firstName}! Угадай загаданное слово. У тебя всего 2 попытки!`;
+            
+            initGameContent();
+        }
+
+        function checkAuthStatus() {
+            const savedName = localStorage.getItem('quizUserName');
+            if (savedName) {
+                state.userName = savedName;
+                
+                authContainer.style.display = 'none';
+                quizContainer.style.display = 'flex';
+                
+                const firstName = savedName.split(/\s+/)[0] || savedName;
+                welcomeMessage.textContent = `Привет, ${firstName}! Угадай загаданное слово. У тебя всего 2 попытки!`;
+                
+                initGameContent();
+            } else {
+                authContainer.style.display = 'flex';
+                quizContainer.style.display = 'none';
+                continueButton.addEventListener('click', handleContinue);
+                
+                fullNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        handleContinue();
+                    }
+                });
+            }
+        }
+        
+        // --- НОВЫЕ ФУНКЦИИ ДЛЯ ЛОГИРОВАНИЯ ---
+        function saveGameLog(status) {
+            const today = new Date();
+            
+            const logEntry = {
+                date: today.toLocaleDateString('ru-RU'),
+                time: today.toLocaleTimeString('ru-RU'),
+                userName: state.userName,
+                question: state.targetQuestion,
+                answer: state.targetAnswer,
+                attempts: state.attemptsCount,
+                status: status, 
+            };
+            
+            state.gameLogs.unshift(logEntry);
+            
+            // Ограничиваем количество записей
+            if (state.gameLogs.length > 50) {
+                state.gameLogs.pop();
+            }
+            
+            localStorage.setItem('quizGameLogs', JSON.stringify(state.gameLogs));
+        }
+
+        // --- ФУНКЦИИ АДМИН-ПАНЕЛИ (ОБНОВЛЕНО) ---
+        function getDailyQuiz(date = new Date()) {
+            const start = new Date(2024, 0, 1);
+            const today = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            const diffTime = Math.abs(today - startDay);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const index = diffDays % QUIZ_DATABASE.length;
+            return QUIZ_DATABASE[index];
+        }
+
+        function generateWordList() {
+            const wordListBody = document.getElementById('word-list-body');
+            wordListBody.innerHTML = '';
+            const today = new Date();
+            for (let i = -7; i <= 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                const quiz = getDailyQuiz(date);
+                const dateFormatted = date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const row = wordListBody.insertRow();
+                if (i === 0) { row.className = 'today-row'; }
+                row.insertCell().textContent = dateFormatted;
+                row.insertCell().textContent = quiz.question;
+                row.insertCell().textContent = quiz.answer;
+            }
+        }
+        
+        function generateLogList() {
+            const logListBody = document.getElementById('log-list-body');
+            logListBody.innerHTML = '';
+            
+            if (state.gameLogs.length === 0) {
+                logListBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #777;">История игр пуста.</td></tr>';
+                return;
+            }
+
+            state.gameLogs.forEach(log => {
+                const row = logListBody.insertRow();
+                
+                if (log.status === 'Победа') {
+                     row.style.backgroundColor = '#d4edda'; 
+                } else if (log.status === 'Проигрыш') {
+                     row.style.backgroundColor = '#f8d7da'; 
+                }
+                
+                row.insertCell().textContent = log.date + ' ' + log.time;
+                row.insertCell().textContent = log.userName.split(/\s+/)[0]; 
+                row.insertCell().textContent = log.question.substring(0, 30) + '...';
+                row.insertCell().textContent = log.answer;
+                row.insertCell().textContent = log.attempts;
+                row.insertCell().textContent = log.status;
+            });
+        }
+
+        window.showAdminPanel = function() {
+            generateWordList(); 
+            generateLogList();  
+            adminModal.style.display = 'block';
+            switchAdminTab('questions'); 
+        }
+
+        window.switchAdminTab = function(tabName) {
+            document.getElementById('quiz-list-view').style.display = tabName === 'questions' ? 'block' : 'none';
+            document.getElementById('log-list-view').style.display = tabName === 'logs' ? 'block' : 'none';
+            
+            document.getElementById('tab-questions').style.fontWeight = tabName === 'questions' ? 'bold' : 'normal';
+            document.getElementById('tab-logs').style.fontWeight = tabName === 'logs' ? 'bold' : 'normal';
+        }
+
+        function handleSecretClick() {
+            clearTimeout(clickTimeout); 
+            secretClickCount++;
+            if (secretClickCount >= REQUIRED_CLICKS) {
+                showAdminPanel();
+                secretClickCount = 0; 
+                return;
+            }
+            clickTimeout = setTimeout(() => {
+                secretClickCount = 0;
+            }, 1000); 
+        }
+        // --- КОНЕЦ ФУНКЦИЙ АДМИН-ПАНЕЛИ ---
+
+        // --- Загрузка и сохранение состояния ---
+        function loadGameState() {
+            const dailyQuiz = getDailyQuiz();
+            const savedState = JSON.parse(localStorage.getItem('quizGameState'));
+            
+            state.targetAnswer = dailyQuiz.answer;
+            state.targetQuestion = dailyQuiz.question;
+
+            if (savedState && savedState.targetAnswer === dailyQuiz.answer) {
+                state = { ...state, ...savedState };
+                if (state.lastFailedTime && Date.now() - state.lastFailedTime < COOLDOWN_MS) {
+                     state.isLocked = true;
+                     state.gameStatus = 'locked';
+                }
+            } else {
+                state.attemptsCount = 0;
+                state.lastFailedTime = 0;
+                state.gameStatus = 'playing';
+            }
+            
+            checkLockStatus();
+        }
+
+        function saveGameState() {
+            localStorage.setItem('quizGameState', JSON.stringify({
+                currentGuess: state.currentGuess,
+                targetAnswer: state.targetAnswer,
+                targetQuestion: state.targetQuestion,
+                attemptsCount: state.attemptsCount,
+                lastFailedTime: state.lastFailedTime,
+                isLocked: state.isLocked,
+                gameStatus: state.gameStatus,
+            }));
+        }
+        
+        // --- Сброс игры после таймера ---
+        function resetGameAfterCooldown() {
+            state.attemptsCount = 0;
+            state.currentGuess = '';
+            state.lastFailedTime = 0;
+            state.isLocked = false;
+            state.gameStatus = 'playing';
+            
+            messageArea.textContent = '';
+            
+            drawQuestionAndAnswer();
+            drawKeyboard();
+            
+            showMessage('Таймер сработал! Игра полностью сброшена. Начните новую попытку.', false);
+            saveGameState();
+        }
+
+
+        // --- Проверка статуса блокировки и отображение таймера ---
+        function checkLockStatus() {
+            if (state.lastFailedTime) {
+                const timePassed = Date.now() - state.lastFailedTime;
+                if (timePassed < COOLDOWN_MS) {
+                    state.isLocked = true;
+                    state.gameStatus = 'locked';
+                    
+                    const remainingTime = COOLDOWN_MS - timePassed;
+                    const totalSeconds = Math.ceil(remainingTime / 1000);
+                    
+                    cooldownArea.textContent = `До следующей попытки: ${totalSeconds} секунд`;
+                    
+                    requestAnimationFrame(checkLockStatus);
+                    return true;
+                } else {
+                    cooldownArea.textContent = '';
+                    resetGameAfterCooldown();
+                    return false;
+                }
+            }
+            state.isLocked = false;
+            if (state.gameStatus === 'locked') {
+                 state.gameStatus = 'playing';
+            }
+            cooldownArea.textContent = '';
+            return false;
+        }
+
+        // --- Отображение сообщения ---
+        function showMessage(msg, isError = false) {
+            messageArea.textContent = msg;
+            
+            messageArea.classList.remove('message-success', 'message-error');
+            messageArea.classList.add(isError ? 'message-error' : 'message-success');
+            
+            if (state.gameStatus !== 'lost' && state.gameStatus !== 'won') {
+                 setTimeout(() => {
+                    messageArea.textContent = '';
+                    messageArea.classList.remove('message-success', 'message-error');
+                }, isError ? 5000 : 2000);
+            }
+        }
+        
+        // --- Отрисовка вопроса и строки ответа ---
+        function drawQuestionAndAnswer() {
+            questionArea.textContent = state.targetQuestion;
+            
+            if (state.gameStatus === 'lost' || state.gameStatus === 'locked') {
+                answerRow.textContent = '❌'; 
+            } else if (state.gameStatus === 'won') {
+                answerRow.textContent = state.targetAnswer + ' ✅';
+            } else {
+                answerRow.textContent = state.currentGuess;
+            }
+        }
+
+        // --- Отрисовка клавиатуры ---
+        function drawKeyboard() {
+            const layout = [
+                'Й Ц У К Е Н Г Ш Щ З Х Ъ',
+                'Ф Ы В А П Р О Л Д Ж Э',
+                'Я Ч С М И Т Ь Б Ю'
+            ];
+            keyboardElement.innerHTML = '';
+            
+            layout.forEach(rowString => {
+                const row = document.createElement('div');
+                row.className = 'keyboard-row';
+                
+                if (rowString.startsWith('Я')) {
+                    const del = document.createElement('button');
+                    del.textContent = '⌫';
+                    del.className = 'key big';
+                    del.onclick = () => handleInput('Backspace');
+                    row.appendChild(del);
+                }
+                
+                rowString.split(' ').forEach(letter => {
+                    const key = document.createElement('button');
+                    key.textContent = letter;
+                    key.className = 'key';
+                    key.onclick = () => handleInput(letter);
+                    row.appendChild(key);
+                });
+                
+                if (rowString.startsWith('Я')) {
+                    const enter = document.createElement('button');
+                    enter.textContent = 'Ввод';
+                    enter.className = 'key big'; 
+                    enter.onclick = () => handleInput('Enter');
+                    row.appendChild(enter);
+                }
+
+                keyboardElement.appendChild(row);
+            });
+        }
+        
+        // --- Логика проверки ответа (ОБНОВЛЕНО: ДОБАВЛЕН saveGameLog) ---
+        function checkGuess() {
+            if (state.isLocked) return; 
+
+            const guess = state.currentGuess.toUpperCase().replace(/Ё/g, 'Е');
+            const target = state.targetAnswer.toUpperCase().replace(/Ё/g, 'Е');
+            
+            state.attemptsCount++;
+
+            // --- ЛОГИКА ПОБЕДЫ ---
+            if (guess === target) {
+                state.gameStatus = 'won';
+                saveGameState();
+                showMessage(`Правильно! Ответ: ${state.targetAnswer}! 🎉`, false); 
+                saveGameLog('Победа'); // <--- ЛОГИРОВАНИЕ ПОБЕДЫ
+            } else {
+                // --- ЛОГИКА НЕУДАЧИ ---
+                if (state.attemptsCount < MAX_ATTEMPTS) {
+                    showMessage(`Неверно. Попыток осталось: ${MAX_ATTEMPTS - state.attemptsCount}`, true);
+                    state.currentGuess = ''; 
+                } else {
+                    // Последняя попытка - Проигрыш
+                    state.gameStatus = 'lost';
+                    
+                    state.lastFailedTime = Date.now();
+                    state.isLocked = true;
+                    state.gameStatus = 'locked';
+                    
+                    showMessage(`Ты не угадал. 💔 Игра заблокирована таймером.`, true);
+                    checkLockStatus(); 
+                    saveGameLog('Проигрыш'); // <--- ЛОГИРОВАНИЕ ПРОИГРЫША
+                }
+                saveGameState();
+            }
+        }
+        
+        // --- Обработка ввода ---
+        function handleInput(key) {
+            const canPlay = !state.isLocked && state.gameStatus !== 'won';
+
+            if (!canPlay) {
+                if (state.isLocked) showMessage(`Игра заблокирована. Дождитесь окончания таймера.`, true);
+                return;
+            }
+            
+            const letter = key.toUpperCase();
+
+            if (letter === 'ENTER') {
+                if (state.currentGuess.trim().length > 0) {
+                    checkGuess();
+                } else {
+                    showMessage(`Введите ответ!`, true);
+                }
+            } else if (letter === 'BACKSPACE' || letter === 'DELETE') {
+                state.currentGuess = state.currentGuess.slice(0, -1);
+            } else if (letter.length === 1 && 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'.includes(letter)) {
+                state.currentGuess += letter;
+            }
+            drawQuestionAndAnswer(); 
+        }
+
+        // --- Инициализация ИГРОВОГО КОНТЕНТА ---
+        function initGameContent() {
+            loadGameState();
+            drawQuestionAndAnswer();
+            drawKeyboard();
+            checkLockStatus();
+            
+            secretTrigger.addEventListener('click', handleSecretClick);
+            
+            document.addEventListener('keyup', (e) => {
+                const isQuizActive = quizContainer.style.display === 'flex';
+                const canPlay = !state.isLocked && state.gameStatus !== 'won';
+                
+                if (e.key === 'Escape' && adminModal.style.display === 'block') {
+                    adminModal.style.display = 'none';
+                    return;
+                }
+
+                if (isQuizActive && canPlay) {
+                    if (e.key === 'Enter') {
+                        handleInput('Enter');
+                    } else if (e.key === 'Backspace') {
+                        handleInput('Backspace');
+                    } else if (e.key.length === 1) { 
+                        if ('АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ'.includes(e.key.toUpperCase())) {
+                            handleInput(e.key);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // --- ГЛОБАЛЬНАЯ ИНИЦИАЛИЗАЦИЯ ---
+        function init() {
+            window.onclick = function(event) {
+                if (event.target == adminModal) {
+                    adminModal.style.display = 'none';
+                }
+            }
+            checkAuthStatus();
+        }
+
+        // Запуск!
+        init();
+
+    </script>
+</body>
+</html>
